@@ -8,13 +8,9 @@ while getopts ":i:o:" opt; do
     o)
 	  output=$OPTARG
       ;;
-    \?)
-      echo "Invalid option: -$OPTARG" >&2
-      exit 1
-      ;;
     :)
       echo "Option -$OPTARG requires a path." >&2
-      exit 1
+      anyerrors=true
       ;;
   esac
 done
@@ -25,19 +21,64 @@ if [[ -z "$input" ]]; then
 else
 	if test -e "$input"; then
 		if test -f "$input"; then
-			echo "File is a File"
+			ft=[$(file --mime-type $input)]
+			if ! echo $ft | grep -q -E 'image/png'; then
+				echo "Invalid filetype: input is not a png"
+				anyerrors=true
+			fi
+			
 		else
 			echo "Invalid option: -i $input is not a valid file"
+			anyerrors=true
 		fi
 	else
 		echo "Invalid option: -i $input no such file"
+		anyerrors=true
 	fi
 fi
 
 
 if [[ -z "$output" ]]; then 
-	echo "Error: -o is required"
-	exit
-else
-	echo "$output"
+	output=$(dirname $input)
 fi
+
+if echo $output | grep -q -E '\.[A-Za-z0-9]+$'; then
+	if echo $output | grep -q -E '\.icns$'; then
+		echo "OUTPUT IS AN ICNS"
+		output_dir=$(dirname $output)
+		output_file=$(basename $output)
+		output_file=${output_file%.*}
+	else
+		echo "Invalid option: -o must be either a directory or a .icns file"
+		anyerrors=true
+	fi 
+else
+	output_dir=$(dirname $output)"/"$(basename $output)
+	input_file=$(basename $input)
+	output_file=${input_file%.*}
+fi
+
+if [ $anyerrors ]; then
+	exit
+fi
+
+iconset_dir=$output_dir"/"$output_file".iconset"
+output_path=$output_dir"/"$output_file".icns"
+
+
+#
+# ACTUAL ICONIFIER SCRIPT.
+#
+mkdir $iconset_dir
+sips -z 16 16     $input --out $iconset_dir/icon_16x16.png
+sips -z 32 32     $input --out $iconset_dir/icon_16x16@2x.png
+sips -z 32 32     $input --out $iconset_dir/icon_32x32.png
+sips -z 64 64     $input --out $iconset_dir/icon_32x32@2x.png
+sips -z 128 128   $input --out $iconset_dir/icon_128x128.png
+sips -z 256 256   $input --out $iconset_dir/icon_128x128@2x.png
+sips -z 256 256   $input --out $iconset_dir/icon_256x256.png
+sips -z 512 512   $input --out $iconset_dir/icon_256x256@2x.png
+sips -z 512 512   $input --out $iconset_dir/icon_512x512.png
+sips -z 1024 1024   $input --out $iconset_dir/icon_512x512@2x.png
+iconutil -c icns -o $output_path $iconset_dir
+rm -R $iconset_dir
