@@ -1,0 +1,43 @@
+#!/bin/bash
+ 
+while getopts ":i:o:" opt; do
+  case $opt in
+    i) 
+	  input=$OPTARG
+      ;;
+    o)
+	  output=$OPTARG
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires a path." >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [[ -z "$input" ]]; then 
+	echo "Error: -i is required"
+	exit
+else
+	if test -e "$input"; then
+		if test -f "$input"; then
+			echo "File is a File"
+		else
+			echo "Invalid option: -i $input is not a valid file"
+		fi
+	else
+		echo "Invalid option: -i $input no such file"
+	fi
+fi
+
+
+if [[ -z "$output" ]]; then 
+	echo "Error: -o is required"
+	exit
+else
+	echo "$output"
+fi
